@@ -1,33 +1,32 @@
-# Brain-Tumor-Detection[readme.md](https://github.com/user-attachments/files/22989561/readme.md)
-# Brain Tumor Detection using VGG16
+# 🧠 Brain Tumor Detection Using VGG16
 
-## 🧠 Overview
-This project implements **brain tumor detection from MRI images** using **transfer learning with the VGG16 CNN architecture**. The model is trained to classify MRI scans as tumor or non-tumor by leveraging a pre-trained VGG16 base model fine-tuned on the custom dataset.
+## 📘 Overview
+This project focuses on **brain tumor detection from MRI images** using **transfer learning with the VGG16 convolutional neural network (CNN)**. The goal is to accurately classify MRI scans into one of three tumor categories or as “no tumor” by fine-tuning a pre-trained model for this medical imaging task.
 
 ---
 
 ## ⚙️ Model Architecture and Methodology
 
 ### 🔹 Transfer Learning with VGG16
-We use **VGG16**, a pre-trained convolutional neural network trained on the ImageNet dataset (1.4 million images), as the base model.
+We utilize **VGG16**, a pre-trained CNN trained on the **ImageNet dataset (1.4 million images)**, as our feature extractor.
 
 - **Model Initialization:**
   ```python
   base_model = VGG16(input_shape=(128,128,3), include_top=False, weights='imagenet')
   ```
   - `input_shape=(128,128,3)` matches the MRI image dimensions.
-  - `include_top=False` removes the final dense layers of VGG16.
-  - `weights='imagenet'` loads pre-trained ImageNet weights for feature extraction.
+  - `include_top=False` removes VGG16’s original classification head.
+  - `weights='imagenet'` loads pre-trained ImageNet weights for rich feature extraction.
 
 - **Freezing Layers:**
-  All layers of the base model are initially frozen to retain learned ImageNet features:
+  Initially, all layers of the base model are frozen to preserve the learned ImageNet weights:
   ```python
   for layer in base_model.layers:
       layer.trainable = False
   ```
 
-- **Fine-tuning:**
-  The last three convolutional layers are made trainable for domain adaptation:
+- **Fine-Tuning:**
+  To improve domain-specific learning, the last three convolutional layers are unfrozen:
   ```python
   base_model.layers[-2].trainable = True
   base_model.layers[-3].trainable = True
@@ -35,7 +34,7 @@ We use **VGG16**, a pre-trained convolutional neural network trained on the Imag
   ```
 
 - **Model Construction:**
-  The new classification head added on top of VGG16 consists of:
+  The new classification head is added on top of VGG16:
   ```python
   model = Sequential()
   model.add(base_model)
@@ -45,89 +44,79 @@ We use **VGG16**, a pre-trained convolutional neural network trained on the Imag
   model.add(Dropout(0.2))
   model.add(Dense(len(unique_labels), activation='softmax'))
   ```
-  - `Flatten()` reshapes VGG16 output.
-  - `Dropout()` layers help prevent overfitting.
-  - The final dense layer uses **softmax** activation for multi-class probability output.
+  - `Flatten()` reshapes the convolutional output.
+  - `Dropout()` layers reduce overfitting.
+  - The final dense layer uses **softmax** activation for multi-class classification.
 
 ---
 
-## 🧩 Dataset
-The model uses the **Brain_Tumor_MRI_Dataset**, which contains two main folders:
+## 🧩 Dataset Description
+The dataset consists of **MRI scans categorized into four tumor classes and one non-tumor category**, divided into separate training and testing folders.
+
+**Dataset structure:**
 ```
 Training/
-  ├── yes/  # Tumor images
-  └── no/   # Non-tumor images
+  ├── glioma/
+  ├── meningioma/
+  ├── notumor/
+  └── pituitary/
+
 Testing/
-  ├── yes/
-  └── no/
+  ├── glioma/
+  ├── meningioma/
+  ├── notumor/
+  └── pituitary/
 ```
-The dataset is automatically downloaded from Google Drive using the file ID configured in the notebook.
+Each subfolder contains MRI images corresponding to its respective class. The dataset is automatically downloaded using `gdown` from a Google Drive source.
 
 ---
 
 ## 🧠 Training Configuration
 - **Optimizer:** `Adam(learning_rate=0.0001)`
-- **Loss Function:** `categorical_crossentropy`
-- **Metrics:** Accuracy
-- **Batch Size:** As per `datagen()` configuration
-- **Epochs:** Defined in notebook (usually between 10–30 depending on resources)
+- **Loss Function:** `sparse_categorical_crossentropy`
+- **Metrics:** `sparse_categorical_accuracy`
+- **Label Encoding:** Integer-encoded class labels
+- **Batch Size:** Defined within the data generator
+- **Epochs:** Typically between 10–30
 
----
-
-## 📊 Evaluation Metrics
-Model performance is evaluated using multiple metrics from scikit-learn:
-
-- ✅ **Accuracy** – overall prediction correctness
-- ✅ **Confusion Matrix** – distribution of correct/incorrect predictions
-- ✅ **Classification Report** – precision, recall, F1-score
-- ✅ **ROC Curve / AUC** – trade-off between TPR and FPR
-
-Example evaluation code:
 ```python
-from sklearn.metrics import classification_report, confusion_matrix, roc_curve, roc_auc_score
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# ROC Curve
-fpr, tpr, thresholds = roc_curve(y_true, y_pred_probs)
-auc = roc_auc_score(y_true, y_pred_probs)
-plt.plot(fpr, tpr, label=f'AUC = {auc:.3f}')
-plt.legend()
-plt.title('ROC Curve')
-plt.show()
-
-# Confusion Matrix
-cm = confusion_matrix(y_true, y_pred_classes)
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-plt.title('Confusion Matrix')
-plt.show()
-
-# Classification Report
-print(classification_report(y_true, y_pred_classes))
+model.compile(optimizer=Adam(learning_rate=0.0001),
+              loss='sparse_categorical_crossentropy',
+              metrics=['sparse_categorical_accuracy'])
 ```
 
 ---
 
-## 🧠 Tools and Libraries
+## 📊 Evaluation Metrics
+The trained model’s performance is assessed using multiple evaluation techniques:
+
+- ✅ **Sparse Categorical Accuracy** – overall model correctness
+- ✅ **Confusion Matrix** – shows per-class prediction distribution
+- ✅ **Classification Report** – precision, recall and F1-score for each class
+- ✅ **ROC Curve / AUC** – measures discriminative power of the model
+
+
+---
+
+## 🧰 Tools and Libraries
 - **TensorFlow / Keras** – deep learning framework
 - **OpenCV, Pillow** – image preprocessing
-- **NumPy, Matplotlib, Seaborn** – numerical operations and visualizations
-- **Scikit-learn** – evaluation metrics
-- **gdown** – dataset download from Google Drive
+- **NumPy, Matplotlib, Seaborn** – numerical computation and visualization
+- **Scikit-learn** – evaluation and performance metrics
+- **gdown** – for automated dataset download
 
 ---
 
-## 🚀 Results
-The fine-tuned VGG16 model achieves strong classification accuracy and AUC scores on test MRI images. The ROC and confusion matrix plots indicate robust tumor vs. non-tumor separation.
+## 🚀 Results Summary
+The fine-tuned VGG16 model achieves **high classification accuracy** and strong **AUC scores** across all classes. ROC and confusion matrix visualizations show clear class separations with minimal misclassifications.
 
-*(You can insert accuracy plots, confusion matrix, and ROC curve images in an `/assets` folder.)*
 
 ---
 
-## 🧾 Future Enhancements
-- Introduce **Grad-CAM** visualization for model explainability
-- Deploy model via **Flask** or **Streamlit** web app
-- Extend to multi-class tumor type detection
+## 🔮 Future Enhancements
+- Implement **Grad-CAM** for explainable AI visualization.
+- Deploy the model using **Flask** or **Streamlit** for real-time predictions.
+- Extend the dataset to include **3D MRI volumes** for enhanced medical insight.
 
 ---
 
